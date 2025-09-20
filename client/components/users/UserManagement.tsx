@@ -86,17 +86,17 @@ export default function UserManagement() {
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
           <h3 className="font-semibold mb-3">إضافة مستخدم جديد</h3>
           <form onSubmit={onCreate} className="grid gap-3">
-            <input className="input" placeholder="اسم المستخدم" value={form.username} onChange={(e)=>setForm({ ...form, username: e.target.value })} />
-            <input className="input" placeholder="الاسم" value={form.name} onChange={(e)=>setForm({ ...form, name: e.target.value })} />
-            <input className="input" placeholder="البريد الإلكتروني" value={form.email} onChange={(e)=>setForm({ ...form, email: e.target.value })} />
-            <select className="input" value={form.role} onChange={(e)=>setForm({ ...form, role: e.target.value as Role })}>
+            <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المستخدم" value={form.username} onChange={(e)=>setForm({ ...form, username: e.target.value })} />
+            <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الاسم" value={form.name} onChange={(e)=>setForm({ ...form, name: e.target.value })} />
+            <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="البريد الإلكتروني" value={form.email} onChange={(e)=>setForm({ ...form, email: e.target.value })} />
+            <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={form.role} onChange={(e)=>setForm({ ...form, role: e.target.value as Role })}>
               <option value="manager">مدير</option>
               <option value="accountant">محاسب</option>
               <option value="employee">موظف</option>
             </select>
-            <input type="password" className="input" placeholder="كلمة المرور" value={form.password} onChange={(e)=>setForm({ ...form, password: e.target.value })} />
+            <input type="password" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="كلمة المرور" value={form.password} onChange={(e)=>setForm({ ...form, password: e.target.value })} />
             <label className="text-sm text-slate-600"><input type="checkbox" className="mr-2" checked={form.active} onChange={(e)=>setForm({ ...form, active: e.target.checked })} /> نشط</label>
-            <button className="btn-primary" type="submit">حفظ</button>
+            <button className="rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2" type="submit">حفظ</button>
           </form>
         </div>
 
