@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { loginHandler, logoutHandler, meHandler } from "./routes/auth";
+import { createUserHandler, deleteUserHandler, listUsersHandler, updateUserHandler } from "./routes/users";
 
 export function createServer() {
   const app = express();
@@ -18,6 +20,17 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Auth
+  app.post("/api/auth/login", loginHandler);
+  app.get("/api/auth/me", meHandler);
+  app.post("/api/auth/logout", logoutHandler);
+
+  // Users (manager-only)
+  app.get("/api/users", listUsersHandler);
+  app.post("/api/users", createUserHandler);
+  app.put("/api/users/:id", updateUserHandler);
+  app.delete("/api/users/:id", deleteUserHandler);
 
   return app;
 }
