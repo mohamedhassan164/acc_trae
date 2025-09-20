@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import UserManagement from "@/components/users/UserManagement";
+import { toast } from "sonner";
 
 type TransType = "revenue" | "expense";
 interface Transaction { id: string; date: string; type: TransType; description: string; amount: number; }
 interface InventoryItem { id: string; name: string; updatedAt: string; quantity: number; unit: string; min: number; }
+interface Movement { id: string; itemId: string; kind: "in"|"out"; qty: number; unitPrice: number; total: number; party: string; date: string; }
 
 function uid() { return Math.random().toString(36).slice(2); }
 
@@ -40,6 +42,7 @@ export default function AccountingSystem() {
     { id: uid(), name: "حديد تسليح", updatedAt: "2024-11-30", quantity: 50, unit: "طن", min: 80 },
     { id: uid(), name: "طوب أحمر", updatedAt: "2024-12-01", quantity: 15000, unit: "قطعة", min: 5000 },
   ]);
+  const [movements, setMovements] = useState<Movement[]>([]);
   const [newItem, setNewItem] = useState({ name: "", quantity: "", unit: "طن", min: "" });
   const addItem = () => {
     if (!newItem.name || !newItem.quantity || !newItem.min) return;
@@ -47,6 +50,38 @@ export default function AccountingSystem() {
     setNewItem({ name: "", quantity: "", unit: "طن", min: "" });
   };
   const deleteItem = (id: string) => setItems(prev => prev.filter(i=>i.id!==id));
+
+  // Receive/Issue forms
+  const today = () => new Date().toLocaleDateString("en-CA");
+  const [receive, setReceive] = useState({ itemId: "", qty: "", unitPrice: "", supplier: "", date: today() });
+  const [issue, setIssue] = useState({ itemId: "", qty: "", unitPrice: "", project: "", date: today() });
+
+  const receiveSubmit = () => {
+    if (!receive.itemId || !receive.qty || !receive.unitPrice || !receive.supplier) return;
+    const qty = Number(receive.qty); const price = Number(receive.unitPrice); const total = qty * price;
+    setItems(prev => prev.map(i => i.id===receive.itemId ? { ...i, quantity: i.quantity + qty, updatedAt: receive.date } : i));
+    setMovements(prev => [{ id: uid(), itemId: receive.itemId, kind: "in", qty, unitPrice: price, total, party: receive.supplier, date: receive.date }, ...prev]);
+    setTransactions(prev => [{ id: uid(), date: receive.date, type: "expense", description: `شراء ${getItemName(receive.itemId)} من ${receive.supplier} (${qty} ${getItemUnit(receive.itemId)} × ${price.toLocaleString()})`, amount: total }, ...prev]);
+    const it = items.find(i=>i.id===receive.itemId);
+    if (it && it.quantity + qty < it.min) toast.warning(`تنبيه: مخزون ${it.name} منخفض`);
+    toast.success("تم تسجيل الوارد وتحديث المصروفات");
+    setReceive({ itemId: "", qty: "", unitPrice: "", supplier: "", date: today() });
+  };
+
+  const issueSubmit = () => {
+    if (!issue.itemId || !issue.qty || !issue.unitPrice || !issue.project) return;
+    const qty = Number(issue.qty); const price = Number(issue.unitPrice); const total = qty * price;
+    setItems(prev => prev.map(i => i.id===issue.itemId ? { ...i, quantity: Math.max(0, i.quantity - qty), updatedAt: issue.date } : i));
+    setMovements(prev => [{ id: uid(), itemId: issue.itemId, kind: "out", qty, unitPrice: price, total, party: issue.project, date: issue.date }, ...prev]);
+    setTransactions(prev => [{ id: uid(), date: issue.date, type: "expense", description: `صرف ${getItemName(issue.itemId)} لمشروع ${issue.project} (${qty} ${getItemUnit(issue.itemId)} × ${price.toLocaleString()})`, amount: total }, ...prev]);
+    const it = items.find(i=>i.id===issue.itemId);
+    if (it && it.quantity - qty < it.min) toast.warning(`تنبيه: مخزون ${it.name} منخفض`);
+    toast.success("تم تسجيل الصرف وتحديث المصروفات");
+    setIssue({ itemId: "", qty: "", unitPrice: "", project: "", date: today() });
+  };
+
+  function getItemName(id: string){ return items.find(i=>i.id===id)?.name ?? ""; }
+  function getItemUnit(id: string){ return items.find(i=>i.id===id)?.unit ?? ""; }
 
   // Reports
   const [reportType, setReportType] = useState("profit-loss");
@@ -73,7 +108,7 @@ export default function AccountingSystem() {
         <div className="flex gap-2">
           {(["dashboard","transactions","inventory","reports","users"] as const).map(tab => (
             <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
-              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"ا��مستخدمون"}
+              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"المس��خدمون"}
             </button>
           ))}
         </div>
@@ -204,7 +239,7 @@ export default function AccountingSystem() {
             <div className="font-semibold mb-2">نتيجة التقرير ({reportType})</div>
             <div className="text-sm text-slate-600">الفترة {dateFrom} - {dateTo}</div>
             <div className="mt-3 grid md:grid-cols-3 gap-3">
-              <Stat value={totals.revenue} label="إجمالي الإيرادات" color="text-emerald-600" />
+              <Stat value={totals.revenue} label="إجمالي ال��يرادات" color="text-emerald-600" />
               <Stat value={totals.expenses} label="إجمالي المصروفات" color="text-rose-600" />
               <Stat value={totals.profit} label="صافي الربح" color="text-indigo-700" />
             </div>
