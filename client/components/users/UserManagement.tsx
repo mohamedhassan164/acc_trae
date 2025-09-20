@@ -158,12 +158,6 @@ export default function UserManagement() {
         </div>
       )}
 
-      <style>{`
-        .input{ @apply rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2; }
-        .btn-primary{ @apply rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2; }
-        .btn-secondary{ @apply rounded-md bg-slate-900 text-white px-3 py-2; }
-        .btn-danger{ @apply rounded-md bg-red-600 text-white px-3 py-2; }
-      `}</style>
     </div>
   );
 }
