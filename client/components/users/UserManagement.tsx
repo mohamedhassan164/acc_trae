@@ -142,17 +142,17 @@ export default function UserManagement() {
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
           <h3 className="font-semibold mb-3">تعديل المستخدم</h3>
           <form onSubmit={onSaveUpdate} className="grid gap-3 md:grid-cols-2">
-            <input className="input" value={editing.name} onChange={(e)=>setEditing({ ...editing, name: e.target.value })} />
-            <input className="input" value={editing.email} onChange={(e)=>setEditing({ ...editing, email: e.target.value })} />
-            <select className="input" value={editing.role} onChange={(e)=>setEditing({ ...editing, role: e.target.value as Role })}>
+            <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={editing.name} onChange={(e)=>setEditing({ ...editing, name: e.target.value })} />
+            <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={editing.email} onChange={(e)=>setEditing({ ...editing, email: e.target.value })} />
+            <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={editing.role} onChange={(e)=>setEditing({ ...editing, role: e.target.value as Role })}>
               <option value="manager">مدير</option>
               <option value="accountant">محاسب</option>
               <option value="employee">موظف</option>
             </select>
             <label className="text-sm text-slate-600 mt-2"><input type="checkbox" className="mr-2" checked={editing.active} onChange={(e)=>setEditing({ ...editing, active: e.target.checked })} /> نشط</label>
             <div className="md:col-span-2 flex gap-2">
-              <button className="btn-primary" type="submit">حفظ التغييرات</button>
-              <button className="btn-secondary" type="button" onClick={()=>setEditing(null)}>إلغاء</button>
+              <button className="rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2" type="submit">حفظ التغييرات</button>
+              <button className="rounded-md bg-slate-900 text-white px-3 py-2" type="button" onClick={()=>setEditing(null)}>إلغاء</button>
             </div>
           </form>
         </div>
