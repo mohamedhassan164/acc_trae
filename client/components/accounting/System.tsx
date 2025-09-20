@@ -108,7 +108,7 @@ export default function AccountingSystem() {
         <div className="flex gap-2">
           {(["dashboard","transactions","inventory","reports","users"] as const).map(tab => (
             <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
-              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"المس��خدمون"}
+              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"المستخدمون"}
             </button>
           ))}
         </div>
@@ -204,6 +204,38 @@ export default function AccountingSystem() {
             <button onClick={addItem} className="mt-3 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2">حفظ المادة</button>
           </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">تسجيل وارد من مورد</h3>
+              <div className="grid md:grid-cols-5 gap-3">
+                <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={receive.itemId} onChange={(e)=>setReceive({ ...receive, itemId: e.target.value })}>
+                  <option value="">اختر المادة</option>
+                  {items.map(i=> <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الكمية" value={receive.qty} onChange={(e)=>setReceive({ ...receive, qty: e.target.value })} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="سعر الوحدة" value={receive.unitPrice} onChange={(e)=>setReceive({ ...receive, unitPrice: e.target.value })} />
+                <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={receive.date} onChange={(e)=>setReceive({ ...receive, date: e.target.value })} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المورد" value={receive.supplier} onChange={(e)=>setReceive({ ...receive, supplier: e.target.value })} />
+              </div>
+              <button onClick={receiveSubmit} className="mt-3 rounded-md bg-slate-900 text-white px-4 py-2">تسجيل الوارد</button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">تسجيل صرف لمشروع</h3>
+              <div className="grid md:grid-cols-5 gap-3">
+                <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={issue.itemId} onChange={(e)=>setIssue({ ...issue, itemId: e.target.value })}>
+                  <option value="">اختر المادة</option>
+                  {items.map(i=> <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الكمية" value={issue.qty} onChange={(e)=>setIssue({ ...issue, qty: e.target.value })} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="سعر الوحدة" value={issue.unitPrice} onChange={(e)=>setIssue({ ...issue, unitPrice: e.target.value })} />
+                <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={issue.date} onChange={(e)=>setIssue({ ...issue, date: e.target.value })} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المشروع" value={issue.project} onChange={(e)=>setIssue({ ...issue, project: e.target.value })} />
+              </div>
+              <button onClick={issueSubmit} className="mt-3 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2">تسجيل الصرف</button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             {items.map(i => (
               <div key={i.id} className={`flex items-center justify-between bg-white border rounded-lg p-3 ${i.quantity < i.min ? "border-rose-300" : "border-slate-200"}`}>
@@ -219,6 +251,40 @@ export default function AccountingSystem() {
               </div>
             ))}
           </div>
+
+          {movements.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">حركة المخزون</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left bg-slate-50">
+                      <th className="px-3 py-2">التاريخ</th>
+                      <th className="px-3 py-2">المادة</th>
+                      <th className="px-3 py-2">نوع الحركة</th>
+                      <th className="px-3 py-2">الكمية</th>
+                      <th className="px-3 py-2">سعر الوحدة</th>
+                      <th className="px-3 py-2">الإجمالي</th>
+                      <th className="px-3 py-2">الجهة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movements.map(m => (
+                      <tr key={m.id} className="border-t">
+                        <td className="px-3 py-2">{m.date}</td>
+                        <td className="px-3 py-2">{getItemName(m.itemId)}</td>
+                        <td className="px-3 py-2">{m.kind === "in" ? "وارد" : "صرف"}</td>
+                        <td className="px-3 py-2">{m.qty} {getItemUnit(m.itemId)}</td>
+                        <td className="px-3 py-2">{m.unitPrice.toLocaleString()}</td>
+                        <td className="px-3 py-2">{m.total.toLocaleString()}</td>
+                        <td className="px-3 py-2">{m.party}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -239,7 +305,7 @@ export default function AccountingSystem() {
             <div className="font-semibold mb-2">نتيجة التقرير ({reportType})</div>
             <div className="text-sm text-slate-600">الفترة {dateFrom} - {dateTo}</div>
             <div className="mt-3 grid md:grid-cols-3 gap-3">
-              <Stat value={totals.revenue} label="إجمالي ال��يرادات" color="text-emerald-600" />
+              <Stat value={totals.revenue} label="إجمالي الإيرادات" color="text-emerald-600" />
               <Stat value={totals.expenses} label="إجمالي المصروفات" color="text-rose-600" />
               <Stat value={totals.profit} label="صافي الربح" color="text-indigo-700" />
             </div>
