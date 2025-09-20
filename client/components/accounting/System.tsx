@@ -18,7 +18,7 @@ export default function AccountingSystem() {
     { id: uid(), date: "2024-12-01", type: "revenue", description: "بيع شقة - المشروع الأول", amount: 150000 },
     { id: uid(), date: "2024-11-28", type: "expense", description: "شراء مواد بناء - أسمنت", amount: 25000 },
   ]);
-  const [quick, setQuick] = useState<{ type: TransType; amount: string; description: string }>({ type: "revenue", amount: "", description: "" });
+  const [quick, setQuick] = useState<{ type: TransType; amount: string; description: string; date: string }>(() => ({ type: "revenue", amount: "", description: "", date: new Date().toLocaleDateString("en-CA") }));
 
   const totals = useMemo(() => {
     const rev = transactions.filter(t=>t.type==="revenue").reduce((a,b)=>a+b.amount,0);
@@ -27,9 +27,9 @@ export default function AccountingSystem() {
   }, [transactions]);
 
   const addQuick = () => {
-    if (!quick.amount || !quick.description) return;
-    setTransactions(prev => [{ id: uid(), date: new Date().toLocaleDateString("en-CA"), type: quick.type, description: quick.description, amount: Number(quick.amount) }, ...prev]);
-    setQuick({ type: "revenue", amount: "", description: "" });
+    if (!quick.amount || !quick.description || !quick.date) return;
+    setTransactions(prev => [{ id: uid(), date: quick.date, type: quick.type, description: quick.description, amount: Number(quick.amount) }, ...prev]);
+    setQuick({ type: "revenue", amount: "", description: "", date: new Date().toLocaleDateString("en-CA") });
   };
 
   const deleteTrans = (id: string) => setTransactions(prev => prev.filter(t=>t.id!==id));
@@ -73,7 +73,7 @@ export default function AccountingSystem() {
         <div className="flex gap-2">
           {(["dashboard","transactions","inventory","reports","users"] as const).map(tab => (
             <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
-              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"المستخدمون"}
+              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"ا��مستخدمون"}
             </button>
           ))}
         </div>
@@ -105,12 +105,13 @@ export default function AccountingSystem() {
 
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
             <h3 className="font-semibold mb-3">إضافة معاملة سريعة</h3>
-            <div className="grid md:grid-cols-4 gap-3">
+            <div className="grid md:grid-cols-5 gap-3">
               <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={quick.type} onChange={(e)=>setQuick({ ...quick, type: e.target.value as TransType })}>
                 <option value="revenue">إيراد</option>
                 <option value="expense">مصروف</option>
               </select>
               <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="المبلغ" value={quick.amount} onChange={(e)=>setQuick({ ...quick, amount: e.target.value })} />
+              <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={quick.date} onChange={(e)=>setQuick({ ...quick, date: e.target.value })} />
               <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2 md:col-span-2" placeholder="الوصف" value={quick.description} onChange={(e)=>setQuick({ ...quick, description: e.target.value })} />
             </div>
             <button onClick={addQuick} className="mt-3 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2">إضافة معاملة</button>
