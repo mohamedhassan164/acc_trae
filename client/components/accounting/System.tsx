@@ -7,6 +7,9 @@ type TransType = "revenue" | "expense";
 interface Transaction { id: string; date: string; type: TransType; description: string; amount: number; }
 interface InventoryItem { id: string; name: string; updatedAt: string; quantity: number; unit: string; min: number; }
 interface Movement { id: string; itemId: string; kind: "in"|"out"; qty: number; unitPrice: number; total: number; party: string; date: string; }
+interface Project { id: string; name: string; location: string; floors: number; units: number; createdAt: string; }
+interface ProjectCost { id: string; projectId: string; type: "construction"|"operation"|"expense"; amount: number; date: string; note: string; }
+interface ProjectSale { id: string; projectId: string; unitNo: string; buyer: string; price: number; date: string; terms?: string; }
 
 function uid() { return Math.random().toString(36).slice(2); }
 
