@@ -126,8 +126,8 @@ export default function UserManagement() {
                       <td className="px-3 py-2">{roleLabel[u.role]}</td>
                       <td className="px-3 py-2">{u.active ? "نشط" : "معطل"}</td>
                       <td className="px-3 py-2 text-right space-x-2">
-                        <button className="btn-secondary" onClick={()=>onUpdate(u)}>تعديل</button>
-                        <button className="btn-danger" onClick={()=>onDelete(u.id)}>حذف</button>
+                        <button className="rounded-md bg-slate-900 text-white px-3 py-2" onClick={()=>onUpdate(u)}>تعديل</button>
+                        <button className="rounded-md bg-red-600 text-white px-3 py-2" onClick={()=>onDelete(u.id)}>حذف</button>
                       </td>
                     </tr>
                   ))}
