@@ -7,7 +7,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100">
+    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100">
       <header className="backdrop-blur bg-white/70 border-b border-slate-200 sticky top-0 z-20">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to={user ? "/dashboard" : "/"} className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
