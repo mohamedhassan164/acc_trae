@@ -160,17 +160,87 @@ export default function AccountingSystem() {
 
 // Reports
   const [reportType, setReportType] = useState("profit-loss");
+  const [selectedProject, setSelectedProject] = useState("");
   const [dateFrom, setDateFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString("en-CA"));
   const [dateTo, setDateTo] = useState(() => new Date().toLocaleDateString("en-CA"));
 
   const filtered = useMemo(() => transactions.filter(t => t.date >= dateFrom && t.date <= dateTo), [transactions, dateFrom, dateTo]);
 
+  function buildReport() {
+    if (reportType === "profit-loss") {
+      const rev = filtered.filter(t=>t.type==="revenue").reduce((a,b)=>a+b.amount,0);
+      const exp = filtered.filter(t=>t.type==="expense").reduce((a,b)=>a+b.amount,0);
+      return { title: "تقرير الأرباح والخسائر", headers: ["البند","القيمة"], rows: [
+        ["إجمالي الإيرادات", rev.toLocaleString()+" ريال"],
+        ["إجمالي المصروفات", exp.toLocaleString()+" ريال"],
+        ["صافي الربح", (rev-exp).toLocaleString()+" ريال"],
+      ] };
+    }
+    if (reportType === "revenue") {
+      return { title: "تقرير الإيرادات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="revenue").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+    }
+    if (reportType === "expense") {
+      return { title: "تقرير المصروفات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="expense").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+    }
+    if (reportType === "salary") {
+      const sal = filtered.filter(t=>t.type==="expense" && /(راتب|salary|مرتبات|موظف)/i.test(t.description));
+      return { title: "تقرير المرتبات", headers: ["التاريخ","الوصف","المبلغ"], rows: sal.map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+    }
+    if (reportType === "inventory") {
+      const rows = items.map(i=>[i.name, i.quantity.toLocaleString()+" "+i.unit, i.min.toLocaleString(), i.quantity < i.min ? "منخفض" : "جيد"]);
+      return { title: "تقرير المخزون", headers: ["المادة","الكمية","الحد الأدنى","الحالة"], rows };
+    }
+    if (reportType === "project") {
+      const p = projects.find(p=>p.id===selectedProject);
+      const c = costs.filter(x=>x.projectId===selectedProject && x.date >= dateFrom && x.date <= dateTo);
+      const s = sales.filter(x=>x.projectId===selectedProject && x.date >= dateFrom && x.date <= dateTo);
+      const totalC = c.reduce((a,b)=>a+b.amount,0), totalS = s.reduce((a,b)=>a+b.price,0);
+      const rows: string[][] = [
+        ["المشروع", p?.name || "-"],
+        ["الموقع", p?.location || "-"],
+        ["عدد الأدوار", String(p?.floors ?? "-")],
+        ["عدد الوحدات", String(p?.units ?? "-")],
+        ["إجمالي التكاليف", totalC.toLocaleString()+" ريال"],
+        ["إجمالي المبيعات", totalS.toLocaleString()+" ريال"],
+        ["الربح/الخسارة", (totalS-totalC).toLocaleString()+" ريال"],
+      ];
+      return { title: "تقرير مشروع عقاري", headers: ["البند","القيمة"], rows };
+    }
+    return { title: "تقرير", headers: [], rows: [] };
+  }
+
   const exportCsv = () => {
-    const rows = [["date","type","description","amount"], ...filtered.map(t=>[t.date,t.type,t.description,String(t.amount)])];
-    const csv = rows.map(r=>r.map(x=>`"${x.replace(/"/g,'""')}"`).join(",")).join("\n");
+    const rep = buildReport();
+    const rows = [rep.headers, ...rep.rows];
+    const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download="report.csv"; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href=url; a.download=`${rep.title}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = () => {
+    const rep = buildReport();
+    const table = `<!doctype html><html dir="rtl"><head><meta charset="utf-8"></head><body><table border="1">${["<tr>"+rep.headers.map(h=>`<th>${h}</th>`).join("")+"</tr>", ...rep.rows.map(r=>"<tr>"+r.map(c=>`<td>${c}</td>`).join("")+"</tr>")].join("")}</table></body></html>`;
+    const blob = new Blob([table], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download=`${rep.title}.xls`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    const rep = buildReport();
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>${rep.title}</title>
+      <style>body{font-family:Arial,system-ui;padding:24px} h1{font-size:20px;margin-bottom:12px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:8px} th{background:#f1f5f9}</style>
+    </head><body>
+      <h1>${rep.title}</h1>
+      <div>الفترة: ${dateFrom} - ${dateTo}</div>
+      <table><thead><tr>${rep.headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>
+        ${rep.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}
+      </tbody></table>
+      <script>window.print()</script>
+    </body></html>`);
+    win.document.close();
   };
 
   return (
@@ -527,13 +597,24 @@ export default function AccountingSystem() {
               <option value="profit-loss">الأرباح والخسائر</option>
               <option value="revenue">الإيرادات</option>
               <option value="expense">المصروفات</option>
+              <option value="salary">المرتبات</option>
+              <option value="project">تقرير مشروع</option>
+              <option value="inventory">تقرير المخزون</option>
             </select>
+            {reportType === "project" && (
+              <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={selectedProject} onChange={(e)=>setSelectedProject(e.target.value)}>
+                <option value="">اختر المشروع</option>
+                {projects.map(p=> <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
             <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} />
             <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} />
+            <button onClick={exportPDF} className="rounded-md bg-indigo-600 text-white px-4 py-2">تصدير PDF</button>
+            <button onClick={exportExcel} className="rounded-md bg-emerald-600 text-white px-4 py-2">تصدير Excel</button>
             <button onClick={exportCsv} className="rounded-md bg-slate-900 text-white px-4 py-2">تصدير CSV</button>
           </div>
           <div className="border rounded-lg p-3">
-            <div className="font-semibold mb-2">نتيجة التقرير ({reportType})</div>
+            <div className="font-semibold mb-2">نتيجة التقرير</div>
             <div className="text-sm text-slate-600">الفترة {dateFrom} - {dateTo}</div>
             <div className="mt-3 grid md:grid-cols-3 gap-3">
               <Stat value={totals.revenue} label="إجمالي الإيرادات" color="text-emerald-600" />
