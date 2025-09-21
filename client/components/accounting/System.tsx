@@ -10,13 +10,16 @@ interface Movement { id: string; itemId: string; kind: "in"|"out"; qty: number; 
 interface Project { id: string; name: string; location: string; floors: number; units: number; createdAt: string; }
 interface ProjectCost { id: string; projectId: string; type: "construction"|"operation"|"expense"; amount: number; date: string; note: string; }
 interface ProjectSale { id: string; projectId: string; unitNo: string; buyer: string; price: number; date: string; terms?: string; }
+interface Project { id: string; name: string; location: string; floors: number; units: number; createdAt: string; }
+interface ProjectCost { id: string; projectId: string; type: "construction"|"operation"|"expense"; amount: number; date: string; note: string; }
+interface ProjectSale { id: string; projectId: string; unitNo: string; buyer: string; price: number; date: string; terms?: string; }
 
 function uid() { return Math.random().toString(36).slice(2); }
 
 export default function AccountingSystem() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
-  const [active, setActive] = useState<"dashboard"|"transactions"|"inventory"|"reports"|"users">("dashboard");
+  const [active, setActive] = useState<"dashboard"|"transactions"|"inventory"|"projects"|"reports"|"users">("dashboard");
 
   // Transactions state
   const [transactions, setTransactions] = useState<Transaction[]>([
@@ -46,6 +49,12 @@ export default function AccountingSystem() {
     { id: uid(), name: "طوب أحمر", updatedAt: "2024-12-01", quantity: 15000, unit: "قطعة", min: 5000 },
   ]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [costs, setCosts] = useState<ProjectCost[]>([]);
+  const [sales, setSales] = useState<ProjectSale[]>([]);
+  const [newProject, setNewProject] = useState({ name: "", location: "", floors: "", units: "" });
+  const [newCost, setNewCost] = useState({ projectId: "", type: "construction" as ProjectCost["type"], amount: "", date: new Date().toLocaleDateString("en-CA"), note: "" });
+  const [newSale, setNewSale] = useState({ projectId: "", unitNo: "", buyer: "", price: "", date: new Date().toLocaleDateString("en-CA"), terms: "" });
   const [newItem, setNewItem] = useState({ name: "", quantity: "", unit: "طن", min: "" });
   const addItem = () => {
     if (!newItem.name || !newItem.quantity || !newItem.min) return;
@@ -86,7 +95,70 @@ export default function AccountingSystem() {
   function getItemName(id: string){ return items.find(i=>i.id===id)?.name ?? ""; }
   function getItemUnit(id: string){ return items.find(i=>i.id===id)?.unit ?? ""; }
 
-  // Reports
+  // Project helpers
+  function projectTotals(id: string){
+    const c = costs.filter(x=>x.projectId===id).reduce((a,b)=>a+b.amount,0);
+    const s = sales.filter(x=>x.projectId===id).reduce((a,b)=>a+b.price,0);
+    return { costs: c, sales: s, profit: s - c, sold: sales.filter(x=>x.projectId===id).length };
+  }
+
+  function addProject(){
+    if (!newProject.name || !newProject.location || !newProject.floors || !newProject.units) return;
+    setProjects(prev => [...prev, { id: uid(), name: newProject.name, location: newProject.location, floors: Number(newProject.floors), units: Number(newProject.units), createdAt: new Date().toLocaleDateString("en-CA") }]);
+    setNewProject({ name: "", location: "", floors: "", units: "" });
+    toast.success("تمت إضافة المشروع العقاري");
+  }
+
+  function addProjectCost(){
+    if (!newCost.projectId || !newCost.amount) return;
+    const amount = Number(newCost.amount);
+    const c: ProjectCost = { id: uid(), projectId: newCost.projectId, type: newCost.type, amount, date: newCost.date, note: newCost.note };
+    setCosts(prev => [c, ...prev]);
+    const p = projects.find(p=>p.id===newCost.projectId);
+    setTransactions(prev => [{ id: uid(), date: newCost.date, type: "expense", description: `تكلفة ${newCost.type === "construction"?"إنشاء":newCost.type === "operation"?"تشغيل":"مصروفات"} لمشروع ${p?.name || ""}`, amount }, ...prev]);
+    toast.success("تم تسجيل تكلفة المشروع وتحديث المصروفات");
+    setNewCost({ projectId: "", type: "construction", amount: "", date: new Date().toLocaleDateString("en-CA"), note: "" });
+  }
+
+  function addProjectSale(){
+    if (!newSale.projectId || !newSale.price || !newSale.unitNo || !newSale.buyer) return;
+    const price = Number(newSale.price);
+    const s: ProjectSale = { id: uid(), projectId: newSale.projectId, unitNo: newSale.unitNo, buyer: newSale.buyer, price, date: newSale.date, terms: newSale.terms };
+    setSales(prev => [s, ...prev]);
+    const p = projects.find(p=>p.id===newSale.projectId);
+    setTransactions(prev => [{ id: uid(), date: newSale.date, type: "revenue", description: `بيع وحدة ${newSale.unitNo} من مشروع ${p?.name || ""} إلى ${newSale.buyer}`, amount: price }, ...prev]);
+    toast.success("تم تسجيل البيع وتحديث الإيرادات");
+    printInvoice(s.id);
+    setNewSale({ projectId: "", unitNo: "", buyer: "", price: "", date: new Date().toLocaleDateString("en-CA"), terms: "" });
+  }
+
+  function printInvoice(id: string){
+    const s = sales.find(x=>x.id===id);
+    if (!s) return;
+    const p = projects.find(x=>x.id===s.projectId);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>فاتورة بيع</title>
+      <style>body{font-family:Arial,system-ui;padding:24px;background:#f6f7fb;color:#111} .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;max-width:720px;margin:0 auto} .h{font-weight:800;font-size:20px;margin-bottom:8px} .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px} .row{display:flex;justify-content:space-between;margin:6px 0} .total{font-weight:800;font-size:18px} .mt{margin-top:16px} .btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#111;color:#fff;border-radius:8px;text-decoration:none}</style>
+    </head><body>
+      <div class="card">
+        <div class="h">فاتورة بيع وحدة عقارية</div>
+        <div class="grid">
+          <div class="row"><div>المشروع:</div><div>${p?.name ?? ""}</div></div>
+          <div class="row"><div>الموقع:</div><div>${p?.location ?? ""}</div></div>
+          <div class="row"><div>رقم الوحدة:</div><div>${s.unitNo}</div></div>
+          <div class="row"><div>المشتري:</div><div>${s.buyer}</div></div>
+          <div class="row"><div>التاريخ:</div><div>${s.date}</div></div>
+        </div>
+        <div class="mt row total"><div>السعر الإجمالي:</div><div>${s.price.toLocaleString()} ريال</div></div>
+        ${s.terms?`<div class="mt">الشروط: ${s.terms}</div>`:""}
+        <a href="#" class="btn" onclick="window.print();return false;">طباعة</a>
+      </div>
+    </body></html>`);
+    win.document.close();
+  }
+
+// Reports
   const [reportType, setReportType] = useState("profit-loss");
   const [dateFrom, setDateFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString("en-CA"));
   const [dateTo, setDateTo] = useState(() => new Date().toLocaleDateString("en-CA"));
@@ -109,9 +181,9 @@ export default function AccountingSystem() {
           <p className="text-slate-500 text-sm">نظام محاسبة عقاري سهل الاستخدام</p>
         </div>
         <div className="flex gap-2">
-          {(["dashboard","transactions","inventory","reports","users"] as const).map(tab => (
+          {(["dashboard","transactions","inventory","projects","reports","users"] as const).map(tab => (
             <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
-              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="reports"?"التقارير":"المستخدمون"}
+              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="projects"?"العقارات":tab==="reports"?"التقارير":"المستخدمون"}
             </button>
           ))}
         </div>
@@ -283,6 +355,162 @@ export default function AccountingSystem() {
                         <td className="px-3 py-2">{m.party}</td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {active==="projects" && (
+        <section className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">إضافة مشروع عقاري</h3>
+              <div className="grid gap-3">
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المشروع" value={newProject.name} onChange={e=>setNewProject({...newProject, name:e.target.value})} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الموقع" value={newProject.location} onChange={e=>setNewProject({...newProject, location:e.target.value})} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="عدد الأدوار" value={newProject.floors} onChange={e=>setNewProject({...newProject, floors:e.target.value})} />
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="عدد الوحدات" value={newProject.units} onChange={e=>setNewProject({...newProject, units:e.target.value})} />
+                </div>
+                <button onClick={addProject} className="rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2">حفظ المشروع</button>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">تسجيل تكلفة للمشروع</h3>
+              <div className="grid gap-3">
+                <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={newCost.projectId} onChange={e=>setNewCost({...newCost, projectId:e.target.value})}>
+                  <option value="">اختر المشروع</option>
+                  {projects.map(p=> <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={newCost.type} onChange={e=>setNewCost({...newCost, type:e.target.value as any})}>
+                    <option value="construction">إنشاء</option>
+                    <option value="operation">تشغيل</option>
+                    <option value="expense">مصروفات</option>
+                  </select>
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="المبلغ" value={newCost.amount} onChange={e=>setNewCost({...newCost, amount:e.target.value})} />
+                </div>
+                <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={newCost.date} onChange={e=>setNewCost({...newCost, date:e.target.value})} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="ملاحظة" value={newCost.note} onChange={e=>setNewCost({...newCost, note:e.target.value})} />
+                <button onClick={addProjectCost} className="rounded-md bg-slate-900 text-white px-4 py-2">تسجيل التكلفة</button>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">تسجيل بيع وحدة وإصدار فاتورة</h3>
+              <div className="grid gap-3">
+                <select className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={newSale.projectId} onChange={e=>setNewSale({...newSale, projectId:e.target.value})}>
+                  <option value="">اختر المشروع</option>
+                  {projects.map(p=> <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="رقم الوحدة" value={newSale.unitNo} onChange={e=>setNewSale({...newSale, unitNo:e.target.value})} />
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="السعر" value={newSale.price} onChange={e=>setNewSale({...newSale, price:e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المشتري" value={newSale.buyer} onChange={e=>setNewSale({...newSale, buyer:e.target.value})} />
+                  <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={newSale.date} onChange={e=>setNewSale({...newSale, date:e.target.value})} />
+                </div>
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="شروط التعاقد (اختياري)" value={newSale.terms} onChange={e=>setNewSale({...newSale, terms:e.target.value})} />
+                <button onClick={addProjectSale} className="rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-2">تسجيل البيع + فاتورة</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+            <h3 className="font-semibold mb-3">المشروعات</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left bg-slate-50">
+                    <th className="px-3 py-2">المشروع</th>
+                    <th className="px-3 py-2">الموقع</th>
+                    <th className="px-3 py-2">الأدوار</th>
+                    <th className="px-3 py-2">الوحدات</th>
+                    <th className="px-3 py-2">مباعة/متاحة</th>
+                    <th className="px-3 py-2">التكاليف</th>
+                    <th className="px-3 py-2">المبيعات</th>
+                    <th className="px-3 py-2">الربح</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.map(p => { const t = projectTotals(p.id); return (
+                    <tr key={p.id} className="border-t">
+                      <td className="px-3 py-2">{p.name}</td>
+                      <td className="px-3 py-2">{p.location}</td>
+                      <td className="px-3 py-2">{p.floors}</td>
+                      <td className="px-3 py-2">{p.units}</td>
+                      <td className="px-3 py-2">{t.sold} / {Math.max(0, p.units - t.sold)}</td>
+                      <td className="px-3 py-2">{t.costs.toLocaleString()} ريال</td>
+                      <td className="px-3 py-2">{t.sales.toLocaleString()} ريال</td>
+                      <td className="px-3 py-2">{t.profit.toLocaleString()} ريال</td>
+                    </tr>
+                  ); })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {sales.length>0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">المبيعات</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left bg-slate-50">
+                      <th className="px-3 py-2">التاريخ</th>
+                      <th className="px-3 py-2">المشروع</th>
+                      <th className="px-3 py-2">الوحدة</th>
+                      <th className="px-3 py-2">المشتري</th>
+                      <th className="px-3 py-2">السعر</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map(s => { const p = projects.find(x=>x.id===s.projectId); return (
+                      <tr key={s.id} className="border-t">
+                        <td className="px-3 py-2">{s.date}</td>
+                        <td className="px-3 py-2">{p?.name}</td>
+                        <td className="px-3 py-2">{s.unitNo}</td>
+                        <td className="px-3 py-2">{s.buyer}</td>
+                        <td className="px-3 py-2">{s.price.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right"><button className="rounded-md bg-slate-900 text-white px-3 py-1" onClick={()=>printInvoice(s.id)}>فاتورة</button></td>
+                      </tr>
+                    ); })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {costs.length>0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
+              <h3 className="font-semibold mb-3">التكاليف</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left bg-slate-50">
+                      <th className="px-3 py-2">التاريخ</th>
+                      <th className="px-3 py-2">المشروع</th>
+                      <th className="px-3 py-2">النوع</th>
+                      <th className="px-3 py-2">المبلغ</th>
+                      <th className="px-3 py-2">ملاحظة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {costs.map(c => { const p = projects.find(x=>x.id===c.projectId); return (
+                      <tr key={c.id} className="border-t">
+                        <td className="px-3 py-2">{c.date}</td>
+                        <td className="px-3 py-2">{p?.name}</td>
+                        <td className="px-3 py-2">{c.type==="construction"?"إنشاء":c.type==="operation"?"تشغيل":"مصروفات"}</td>
+                        <td className="px-3 py-2">{c.amount.toLocaleString()}</td>
+                        <td className="px-3 py-2">{c.note}</td>
+                      </tr>
+                    ); })}
                   </tbody>
                 </table>
               </div>
