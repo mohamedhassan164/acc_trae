@@ -4,7 +4,7 @@ import UserManagement from "@/components/users/UserManagement";
 import { toast } from "sonner";
 
 type TransType = "revenue" | "expense";
-interface Transaction { id: string; date: string; type: TransType; description: string; amount: number; }
+interface Transaction { id: string; date: string; type: TransType; description: string; amount: number; approved: boolean; createdBy?: "manager"|"accountant"|"employee"; }
 interface InventoryItem { id: string; name: string; updatedAt: string; quantity: number; unit: string; min: number; }
 interface Movement { id: string; itemId: string; kind: "in"|"out"; qty: number; unitPrice: number; total: number; party: string; date: string; }
 interface Project { id: string; name: string; location: string; floors: number; units: number; createdAt: string; }
@@ -19,12 +19,14 @@ function uid() { return Math.random().toString(36).slice(2); }
 export default function AccountingSystem() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
+  const isAccountant = user?.role === "accountant";
+  const isEmployee = user?.role === "employee";
   const [active, setActive] = useState<"dashboard"|"transactions"|"inventory"|"projects"|"reports"|"users">("dashboard");
 
   // Transactions state
   const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: uid(), date: "2024-12-01", type: "revenue", description: "بيع شقة - المشروع الأول", amount: 150000 },
-    { id: uid(), date: "2024-11-28", type: "expense", description: "شراء مواد بناء - أسمنت", amount: 25000 },
+    { id: uid(), date: "2024-12-01", type: "revenue", description: "بيع شقة - المشروع الأول", amount: 150000, approved: true, createdBy: "manager" },
+    { id: uid(), date: "2024-11-28", type: "expense", description: "شراء مواد بناء - أسمنت", amount: 25000, approved: true, createdBy: "manager" },
   ]);
   const [quick, setQuick] = useState<{ type: TransType; amount: string; description: string; date: string }>(() => ({ type: "revenue", amount: "", description: "", date: new Date().toLocaleDateString("en-CA") }));
 
@@ -36,7 +38,8 @@ export default function AccountingSystem() {
 
   const addQuick = () => {
     if (!quick.amount || !quick.description || !quick.date) return;
-    setTransactions(prev => [{ id: uid(), date: quick.date, type: quick.type, description: quick.description, amount: Number(quick.amount) }, ...prev]);
+    const approved = isManager || isAccountant;
+    setTransactions(prev => [{ id: uid(), date: quick.date, type: quick.type, description: quick.description, amount: Number(quick.amount), approved, createdBy: user?.role as any }, ...prev]);
     setQuick({ type: "revenue", amount: "", description: "", date: new Date().toLocaleDateString("en-CA") });
   };
 
@@ -73,7 +76,7 @@ export default function AccountingSystem() {
     const qty = Number(receive.qty); const price = Number(receive.unitPrice); const total = qty * price;
     setItems(prev => prev.map(i => i.id===receive.itemId ? { ...i, quantity: i.quantity + qty, updatedAt: receive.date } : i));
     setMovements(prev => [{ id: uid(), itemId: receive.itemId, kind: "in", qty, unitPrice: price, total, party: receive.supplier, date: receive.date }, ...prev]);
-    setTransactions(prev => [{ id: uid(), date: receive.date, type: "expense", description: `شراء ${getItemName(receive.itemId)} من ${receive.supplier} (${qty} ${getItemUnit(receive.itemId)} × ${price.toLocaleString()})`, amount: total }, ...prev]);
+    setTransactions(prev => [{ id: uid(), date: receive.date, type: "expense", description: `شراء ${getItemName(receive.itemId)} من ${receive.supplier} (${qty} ${getItemUnit(receive.itemId)} × ${price.toLocaleString()})`, amount: total, approved: isManager || isAccountant, createdBy: user?.role as any }, ...prev]);
     const it = items.find(i=>i.id===receive.itemId);
     if (it && it.quantity + qty < it.min) toast.warning(`تنبيه: مخزون ${it.name} منخفض`);
     toast.success("تم تسجيل الوارد وتحديث المصروفات");
@@ -85,7 +88,7 @@ export default function AccountingSystem() {
     const qty = Number(issue.qty); const price = Number(issue.unitPrice); const total = qty * price;
     setItems(prev => prev.map(i => i.id===issue.itemId ? { ...i, quantity: Math.max(0, i.quantity - qty), updatedAt: issue.date } : i));
     setMovements(prev => [{ id: uid(), itemId: issue.itemId, kind: "out", qty, unitPrice: price, total, party: issue.project, date: issue.date }, ...prev]);
-    setTransactions(prev => [{ id: uid(), date: issue.date, type: "expense", description: `صرف ${getItemName(issue.itemId)} لمشروع ${issue.project} (${qty} ${getItemUnit(issue.itemId)} × ${price.toLocaleString()})`, amount: total }, ...prev]);
+    setTransactions(prev => [{ id: uid(), date: issue.date, type: "expense", description: `صرف ${getItemName(issue.itemId)} لمشروع ${issue.project} (${qty} ${getItemUnit(issue.itemId)} × ${price.toLocaleString()})`, amount: total, approved: isManager || isAccountant, createdBy: user?.role as any }, ...prev]);
     const it = items.find(i=>i.id===issue.itemId);
     if (it && it.quantity - qty < it.min) toast.warning(`تنبيه: مخزون ${it.name} منخفض`);
     toast.success("تم تسجيل الصرف وتحديث المصروفات");
@@ -150,7 +153,7 @@ export default function AccountingSystem() {
           <div class="row"><div>المشتري:</div><div>${s.buyer}</div></div>
           <div class="row"><div>التاريخ:</div><div>${s.date}</div></div>
         </div>
-        <div class="mt row total"><div>السعر الإجمالي:</div><div>${s.price.toLocaleString()} ريال</div></div>
+        <div class="mt row total"><div>السعر الإجمالي:</div><div>${s.price.toLocaleString()} ج.م</div></div>
         ${s.terms?`<div class="mt">الشروط: ${s.terms}</div>`:""}
         <a href="#" class="btn" onclick="window.print();return false;">طباعة</a>
       </div>
@@ -171,20 +174,20 @@ export default function AccountingSystem() {
       const rev = filtered.filter(t=>t.type==="revenue").reduce((a,b)=>a+b.amount,0);
       const exp = filtered.filter(t=>t.type==="expense").reduce((a,b)=>a+b.amount,0);
       return { title: "تقرير الأرباح والخسائر", headers: ["البند","القيمة"], rows: [
-        ["إجمالي الإيرادات", rev.toLocaleString()+" ريال"],
-        ["إجمالي المصروفات", exp.toLocaleString()+" ريال"],
-        ["صافي الربح", (rev-exp).toLocaleString()+" ريال"],
+        ["إجمالي الإيرادات", rev.toLocaleString()+" ج.م"],
+        ["إجمالي المصروفات", exp.toLocaleString()+" ج.م"],
+        ["صافي الربح", (rev-exp).toLocaleString()+" ج.م"],
       ] };
     }
     if (reportType === "revenue") {
-      return { title: "تقرير الإيرادات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="revenue").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+      return { title: "تقرير الإيرادات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="revenue").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ج.م"]) };
     }
     if (reportType === "expense") {
-      return { title: "تقرير المصروفات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="expense").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+      return { title: "تقرير المصروفات", headers: ["التاريخ","الوصف","المبلغ"], rows: filtered.filter(t=>t.type==="expense").map(t=>[t.date,t.description, t.amount.toLocaleString()+" ج.م"]) };
     }
     if (reportType === "salary") {
       const sal = filtered.filter(t=>t.type==="expense" && /(راتب|salary|مرتبات|موظف)/i.test(t.description));
-      return { title: "تقرير المرتبات", headers: ["التاريخ","الوصف","المبلغ"], rows: sal.map(t=>[t.date,t.description, t.amount.toLocaleString()+" ريال"]) };
+      return { title: "تقرير المرتبات", headers: ["التاريخ","الوصف","المبلغ"], rows: sal.map(t=>[t.date,t.description, t.amount.toLocaleString()+" ج.م"]) };
     }
     if (reportType === "inventory") {
       const rows = items.map(i=>[i.name, i.quantity.toLocaleString()+" "+i.unit, i.min.toLocaleString(), i.quantity < i.min ? "منخفض" : "جيد"]);
@@ -200,9 +203,9 @@ export default function AccountingSystem() {
         ["الموقع", p?.location || "-"],
         ["عدد الأدوار", String(p?.floors ?? "-")],
         ["عدد الوحدات", String(p?.units ?? "-")],
-        ["إجمالي التكاليف", totalC.toLocaleString()+" ريال"],
-        ["إجمالي المبيعات", totalS.toLocaleString()+" ريال"],
-        ["الربح/الخسارة", (totalS-totalC).toLocaleString()+" ريال"],
+        ["إجمالي التكاليف", totalC.toLocaleString()+" ج.م"],
+        ["إجمالي المبيعات", totalS.toLocaleString()+" ج.م"],
+        ["الربح/الخسارة", (totalS-totalC).toLocaleString()+" ج.م"],
       ];
       return { title: "تقرير مشروع عقاري", headers: ["البند","القيمة"], rows };
     }
@@ -251,11 +254,17 @@ export default function AccountingSystem() {
           <p className="text-slate-500 text-sm">نظام محاسبة عقاري سهل الاستخدام</p>
         </div>
         <div className="flex gap-2">
-          {(["dashboard","transactions","inventory","projects","reports","users"] as const).map(tab => (
-            <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
-              {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="projects"?"العقارات":tab==="reports"?"التقارير":"المستخدمون"}
-            </button>
-          ))}
+          {(() => {
+            const tabs: (typeof active)[] = ["dashboard", "inventory", "projects"]; // للجميع
+            if (isManager || isAccountant) tabs.splice(1, 0, "transactions");
+            if (isManager || isAccountant) tabs.push("reports");
+            if (isManager) tabs.push("users");
+            return tabs.map(tab => (
+              <button key={tab} onClick={()=>setActive(tab)} className={`px-3 py-2 rounded-full border ${active===tab?"bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent":"border-indigo-300 text-indigo-700"}`}>
+                {tab==="dashboard"?"لوحة التحكم":tab==="transactions"?"المعاملات":tab==="inventory"?"المخزون":tab==="projects"?"العقارات":tab==="reports"?"التقارير":"المستخدمون"}
+              </button>
+            ));
+          })()}
         </div>
       </div>
 
@@ -280,7 +289,7 @@ export default function AccountingSystem() {
           <div className="grid md:grid-cols-3 gap-4">
             <Stat value={totals.revenue} label="إجمالي الإيرادات" color="text-emerald-600" />
             <Stat value={totals.expenses} label="إجمالي المصروفات" color="text-rose-600" />
-            <Stat value={totals.profit} label="صافي الربح" color="text-indigo-700" />
+            <Stat value={totals.profit} label="صافي الربح (ج.م)" color="text-indigo-700" />
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow">
@@ -310,6 +319,7 @@ export default function AccountingSystem() {
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">الوصف</th>
                   <th className="px-3 py-2">المبلغ</th>
+                  <th className="px-3 py-2">الحالة</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -319,8 +329,12 @@ export default function AccountingSystem() {
                     <td className="px-3 py-2">{t.date}</td>
                     <td className="px-3 py-2"><span className={`px-2 py-1 rounded-full text-xs ${t.type==="revenue"?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}`}>{t.type==="revenue"?"إيراد":"مصروف"}</span></td>
                     <td className="px-3 py-2">{t.description}</td>
-                    <td className="px-3 py-2">{t.amount.toLocaleString()} ريال</td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2">{t.amount.toLocaleString()} ج.م</td>
+                    <td className="px-3 py-2">{(t as any).approved ? <span className="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">معتمد</span> : <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">بانتظار الاعتماد</span>}</td>
+                    <td className="px-3 py-2 text-right space-x-2">
+                      {isManager && !(t as any).approved && (
+                        <button className="rounded-md bg-indigo-600 text-white px-3 py-1" onClick={()=>setTransactions(prev=>prev.map(x=>x.id===t.id?{...(x as any), approved:true}:x))}>اعتماد</button>
+                      )}
                       <button className="rounded-md bg-red-600 text-white px-3 py-1" onClick={()=>deleteTrans(t.id)}>حذف</button>
                     </td>
                   </tr>
@@ -515,9 +529,9 @@ export default function AccountingSystem() {
                       <td className="px-3 py-2">{p.floors}</td>
                       <td className="px-3 py-2">{p.units}</td>
                       <td className="px-3 py-2">{t.sold} / {Math.max(0, p.units - t.sold)}</td>
-                      <td className="px-3 py-2">{t.costs.toLocaleString()} ريال</td>
-                      <td className="px-3 py-2">{t.sales.toLocaleString()} ريال</td>
-                      <td className="px-3 py-2">{t.profit.toLocaleString()} ريال</td>
+                      <td className="px-3 py-2">{t.costs.toLocaleString()} ج.م</td>
+                      <td className="px-3 py-2">{t.sales.toLocaleString()} ج.م</td>
+                      <td className="px-3 py-2">{t.profit.toLocaleString()} ج.م</td>
                     </tr>
                   ); })}
                 </tbody>
@@ -619,7 +633,7 @@ export default function AccountingSystem() {
             <div className="mt-3 grid md:grid-cols-3 gap-3">
               <Stat value={totals.revenue} label="إجمالي الإيرادات" color="text-emerald-600" />
               <Stat value={totals.expenses} label="إجمالي المصروفات" color="text-rose-600" />
-              <Stat value={totals.profit} label="صافي الربح" color="text-indigo-700" />
+              <Stat value={totals.profit} label="صافي الربح (ج.م)" color="text-indigo-700" />
             </div>
           </div>
         </section>
@@ -630,7 +644,7 @@ export default function AccountingSystem() {
           {isManager ? (
             <UserManagement />
           ) : (
-            <div className="rounded-xl p-6 bg-white border border-slate-200 shadow">ليس لديك صلاحية لعرض إدارة المستخدمين</div>
+            <div className="rounded-xl p-6 bg-white border border-slate-200 shadow">ليس ل��يك صلاحية لعرض إدارة المستخدمين</div>
           )}
         </section>
       )}
