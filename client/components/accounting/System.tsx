@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import UserManagement from "@/components/users/UserManagement";
 import { toast } from "sonner";
@@ -372,7 +372,7 @@ export default function AccountingSystem() {
                   <option value="">اختر المادة</option>
                   {items.map(i=> <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
-                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الكمية" value={receive.qty} onChange={(e)=>setReceive({ ...receive, qty: e.target.value })} />
+                <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="الكم��ة" value={receive.qty} onChange={(e)=>setReceive({ ...receive, qty: e.target.value })} />
                 <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="سعر الوحدة" value={receive.unitPrice} onChange={(e)=>setReceive({ ...receive, unitPrice: e.target.value })} />
                 <input type="date" className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" value={receive.date} onChange={(e)=>setReceive({ ...receive, date: e.target.value })} />
                 <input className="rounded-md border-2 border-slate-200 focus:border-indigo-500 outline-none px-3 py-2" placeholder="اسم المورد" value={receive.supplier} onChange={(e)=>setReceive({ ...receive, supplier: e.target.value })} />
@@ -612,7 +612,7 @@ export default function AccountingSystem() {
               <option value="profit-loss">الأرباح والخسائر</option>
               <option value="revenue">الإيرادات</option>
               <option value="expense">المصروفات</option>
-              <option value="salary">��لمرتبات</option>
+              <option value="salary">المرتبات</option>
               <option value="project">تقرير مشروع</option>
               <option value="inventory">تقرير المخزون</option>
             </select>
