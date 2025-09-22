@@ -10,15 +10,29 @@
       "dist/server/**/*.js"
     ]
   },
+  "main": "electron/main.mjs",
   "scripts": {
     "dev": "vite",
+    "desktop:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:8080 && cross-env ELECTRON_START_URL=http://localhost:8080 electron .\"",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
+    "desktop:build": "pnpm build && electron-builder -w",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
     "typecheck": "tsc"
+  },
+  "build": {
+    "appId": "com.accounting.desktop",
+    "productName": "Accounting System",
+    "directories": { "buildResources": "electron" },
+    "files": [
+      "dist/spa/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": { "target": ["nsis"], "artifactName": "${productName}-Setup-${version}.${ext}" }
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
