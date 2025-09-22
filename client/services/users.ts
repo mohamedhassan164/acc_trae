@@ -7,14 +7,14 @@ function authHeaders() {
 }
 
 export async function listUsers(): Promise<User[]> {
-  const res = await fetch("/api/users", { headers: { ...authHeaders() } });
+  const res = await fetch("/api/admin/users", { headers: { ...authHeaders() } });
   if (!res.ok) throw new Error((await res.json()).error || "Failed to list users");
   const data = (await res.json()) as UsersListResponse;
   return data.users;
 }
 
 export async function createUser(input: UserCreateRequest): Promise<User> {
-  const res = await fetch("/api/users", {
+  const res = await fetch("/api/admin/users", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
@@ -24,7 +24,7 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
 }
 
 export async function updateUser(id: string, patch: UserUpdateRequest): Promise<User> {
-  const res = await fetch(`/api/users/${id}`, {
+  const res = await fetch(`/api/admin/users/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(patch),
@@ -34,7 +34,7 @@ export async function updateUser(id: string, patch: UserUpdateRequest): Promise<
 }
 
 export async function deleteUserApi(id: string): Promise<void> {
-  const res = await fetch(`/api/users/${id}`, {
+  const res = await fetch(`/api/admin/users/${id}`, {
     method: "DELETE",
     headers: { ...authHeaders() },
   });

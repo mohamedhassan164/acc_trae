@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { loginHandler, logoutHandler, meHandler } from "./routes/auth";
 import { createUserHandler, deleteUserHandler, listUsersHandler, updateUserHandler } from "./routes/users";
+import { adminCreateUser, adminDeleteUser, adminListUsers, adminUpdateUser } from "./routes/admin-users";
 
 export function createServer() {
   const app = express();
@@ -26,11 +27,17 @@ export function createServer() {
   app.get("/api/auth/me", meHandler);
   app.post("/api/auth/logout", logoutHandler);
 
-  // Users (manager-only)
+  // Users (legacy in-memory)
   app.get("/api/users", listUsersHandler);
   app.post("/api/users", createUserHandler);
   app.put("/api/users/:id", updateUserHandler);
   app.delete("/api/users/:id", deleteUserHandler);
+
+  // Users (Supabase admin)
+  app.get("/api/admin/users", adminListUsers);
+  app.post("/api/admin/users", adminCreateUser);
+  app.put("/api/admin/users/:id", adminUpdateUser);
+  app.delete("/api/admin/users/:id", adminDeleteUser);
 
   return app;
 }
