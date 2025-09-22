@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import UserManagement from "@/components/users/UserManagement";
 import { toast } from "sonner";
+import { load, save } from "@/lib/storage";
 
 type TransType = "revenue" | "expense";
 interface Transaction { id: string; date: string; type: TransType; description: string; amount: number; approved: boolean; createdBy?: "manager"|"accountant"|"employee"; }
@@ -611,7 +612,7 @@ export default function AccountingSystem() {
               <option value="profit-loss">الأرباح والخسائر</option>
               <option value="revenue">الإيرادات</option>
               <option value="expense">المصروفات</option>
-              <option value="salary">المرتبات</option>
+              <option value="salary">��لمرتبات</option>
               <option value="project">تقرير مشروع</option>
               <option value="inventory">تقرير المخزون</option>
             </select>
