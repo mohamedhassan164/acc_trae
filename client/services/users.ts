@@ -1,6 +1,7 @@
 import type { User, UsersListResponse, UserCreateRequest, UserUpdateRequest } from "@shared/api";
 import { getToken } from "./auth";
 import { cacheKeyFor, enqueue, getCached, isOnline, setCached } from "@/lib/offline";
+import { apiUrl } from "@/lib/api";
 
 function authHeaders() {
   const token = getToken();
