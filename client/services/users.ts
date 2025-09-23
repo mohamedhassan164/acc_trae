@@ -139,7 +139,7 @@ export async function updateUser(
 }
 
 export async function deleteUserApi(id: string): Promise<void> {
-  const headers = { ...authHeaders() } as Record<string, string>;
+  const headers = {} as Record<string, string>;
   const key = cacheKeyFor(LIST_URL);
 
   if (!isOnline()) {
