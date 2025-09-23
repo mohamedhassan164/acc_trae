@@ -93,7 +93,6 @@ export async function updateUser(
 ): Promise<User> {
   const headers = {
     "Content-Type": "application/json",
-    ...authHeaders(),
   } as Record<string, string>;
   const key = cacheKeyFor(LIST_URL);
 
