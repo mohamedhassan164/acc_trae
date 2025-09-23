@@ -1,29 +1,29 @@
-import localforage from 'localforage';
+import localforage from "localforage";
 
 // Ensure a stable store; if already configured elsewhere, this is idempotent
-localforage.config({ name: 'accounting-app', storeName: 'state' });
+localforage.config({ name: "accounting-app", storeName: "state" });
 
 export type QueuedRequest = {
   id: string;
   url: string;
-  method: 'POST' | 'PUT' | 'DELETE';
+  method: "POST" | "PUT" | "DELETE";
   headers: Record<string, string>;
   body: any;
   createdAt: number;
   retryCount: number;
 };
 
-const QUEUE_KEY = 'offline_queue_v1';
-const CACHE_PREFIX = 'offline_cache_v1:';
+const QUEUE_KEY = "offline_queue_v1";
+const CACHE_PREFIX = "offline_cache_v1:";
 
 export function isOnline(): boolean {
-  if (typeof navigator === 'undefined') return true;
+  if (typeof navigator === "undefined") return true;
   return navigator.onLine;
 }
 
 function getTokenForCache(): string | null {
   try {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem("auth_token");
   } catch {
     return null;
   }
@@ -31,7 +31,7 @@ function getTokenForCache(): string | null {
 
 export function cacheKeyFor(url: string): string {
   const token = getTokenForCache();
-  return `${CACHE_PREFIX}GET:${url}:t=${token ? token.slice(0, 16) : 'anon'}`;
+  return `${CACHE_PREFIX}GET:${url}:t=${token ? token.slice(0, 16) : "anon"}`;
 }
 
 export async function getCached<T>(key: string): Promise<T | null> {
@@ -52,7 +52,9 @@ async function saveQueue(q: QueuedRequest[]): Promise<void> {
   await localforage.setItem(QUEUE_KEY, q);
 }
 
-export async function enqueue(req: Omit<QueuedRequest, 'id' | 'createdAt' | 'retryCount'>) {
+export async function enqueue(
+  req: Omit<QueuedRequest, "id" | "createdAt" | "retryCount">,
+) {
   const q = await loadQueue();
   const item: QueuedRequest = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -78,7 +80,7 @@ export async function processQueue(): Promise<void> {
     try {
       const res = await fetch(item.url, {
         method: item.method,
-        headers: { 'Content-Type': 'application/json', ...item.headers },
+        headers: { "Content-Type": "application/json", ...item.headers },
         body: item.body != null ? JSON.stringify(item.body) : undefined,
       });
       if (!res.ok) {
@@ -92,7 +94,7 @@ export async function processQueue(): Promise<void> {
       } else {
         // Optionally: trigger cache invalidation for known collections
         // Keep generic: remove cached GET for same origin path
-        const listKey = cacheKeyFor('/api/admin/users');
+        const listKey = cacheKeyFor("/api/admin/users");
         await localforage.removeItem(listKey);
       }
     } catch {
@@ -103,7 +105,10 @@ export async function processQueue(): Promise<void> {
   }
   await saveQueue(remaining);
   if (remaining.length) {
-    const backoff = Math.min(30000, 1000 * Math.pow(2, remaining[0].retryCount));
+    const backoff = Math.min(
+      30000,
+      1000 * Math.pow(2, remaining[0].retryCount),
+    );
     await wait(backoff);
     // Try again in background
     processQueue();
@@ -114,8 +119,8 @@ let started = false;
 export function startOfflineSync() {
   if (started) return;
   started = true;
-  if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", () => {
       processQueue().catch(() => {});
     });
   }

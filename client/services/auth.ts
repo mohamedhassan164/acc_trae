@@ -1,4 +1,9 @@
-import type { AuthLoginRequest, AuthLoginResponse, AuthMeResponse, User } from "@shared/api";
+import type {
+  AuthLoginRequest,
+  AuthLoginResponse,
+  AuthMeResponse,
+  User,
+} from "@shared/api";
 import { apiUrl } from "@/lib/api";
 
 const AUTH_KEY = "auth_token";
@@ -12,7 +17,9 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(AUTH_KEY);
 }
 
-export async function login(input: AuthLoginRequest): Promise<AuthLoginResponse> {
+export async function login(
+  input: AuthLoginRequest,
+): Promise<AuthLoginResponse> {
   const res = await fetch(apiUrl("/api/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
