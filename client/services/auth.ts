@@ -35,7 +35,9 @@ export async function me(): Promise<User | null> {
   const token = getToken();
   if (!token) return null;
   try {
-    const res = await fetch(apiUrl(`/api/auth/me?token=${encodeURIComponent(token)}`));
+    const res = await fetch(
+      apiUrl(`/api/auth/me?token=${encodeURIComponent(token)}`),
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as AuthMeResponse;
     return data.user;
