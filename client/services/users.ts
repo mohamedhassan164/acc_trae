@@ -120,7 +120,7 @@ export async function updateUser(
     } as User;
   }
 
-  const res = await fetch(apiUrl(`${LIST_URL}/${id}`), {
+  const res = await fetch(apiUrl(withToken(`${LIST_URL}/${id}`)), {
     method: "PUT",
     headers,
     body: JSON.stringify(patch),
