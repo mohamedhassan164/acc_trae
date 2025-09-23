@@ -62,7 +62,7 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
     };
     const current = (await getCached<User[]>(key)) ?? [];
     await setCached(key, [temp, ...current]);
-    await enqueue({ url: LIST_URL, method: "POST", headers, body: input });
+    await enqueue({ url: withToken(LIST_URL), method: "POST", headers, body: input });
     return temp;
   }
 
