@@ -66,7 +66,7 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
     return temp;
   }
 
-  const res = await fetch(apiUrl(LIST_URL), {
+  const res = await fetch(apiUrl(withToken(LIST_URL)), {
     method: "POST",
     headers,
     body: JSON.stringify(input),
