@@ -28,9 +28,7 @@ export async function listUsers(): Promise<User[]> {
   // If online, fetch fresh and update cache; on failure or offline, fallback to cache
   if (isOnline()) {
     try {
-      const res = await fetch(apiUrl(LIST_URL), {
-        headers: { ...authHeaders() },
-      });
+      const res = await fetch(apiUrl(withToken(LIST_URL)));
       if (res.ok) {
         const data = (await res.json()) as UsersListResponse;
         await setCached(key, data.users);
