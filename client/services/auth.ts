@@ -12,7 +12,7 @@ export function setToken(token: string | null) {
 }
 
 export async function login(input: AuthLoginRequest): Promise<AuthLoginResponse> {
-  const res = await fetch("/api/auth/login", {
+  const res = await fetch(apiUrl("/api/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
