@@ -35,9 +35,7 @@ export async function me(): Promise<User | null> {
   const token = getToken();
   if (!token) return null;
   try {
-    const res = await fetch(apiUrl("/api/auth/me"), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(apiUrl(`/api/auth/me?token=${encodeURIComponent(token)}`));
     if (!res.ok) return null;
     const data = (await res.json()) as AuthMeResponse;
     return data.user;
@@ -49,9 +47,8 @@ export async function me(): Promise<User | null> {
 export async function logout() {
   const token = getToken();
   try {
-    await fetch(apiUrl("/api/auth/logout"), {
+    await fetch(apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`), {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
     // ignore network errors on logout
