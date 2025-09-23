@@ -27,7 +27,7 @@ export async function login(input: AuthLoginRequest): Promise<AuthLoginResponse>
 export async function me(): Promise<User | null> {
   const token = getToken();
   if (!token) return null;
-  const res = await fetch("/api/auth/me", {
+  const res = await fetch(apiUrl("/api/auth/me"), {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
@@ -37,7 +37,7 @@ export async function me(): Promise<User | null> {
 
 export async function logout() {
   const token = getToken();
-  await fetch("/api/auth/logout", {
+  await fetch(apiUrl("/api/auth/logout"), {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
