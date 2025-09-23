@@ -14,9 +14,11 @@ import {
 } from "@/lib/offline";
 import { apiUrl } from "@/lib/api";
 
-function authHeaders() {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function withToken(url: string) {
+  const t = getToken();
+  if (!t) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}token=${encodeURIComponent(t)}`;
 }
 
 const LIST_URL = "/api/admin/users"; // logical path
