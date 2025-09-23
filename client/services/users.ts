@@ -102,7 +102,7 @@ export async function updateUser(
     );
     await setCached<User[]>(key, updated);
     await enqueue({
-      url: `${LIST_URL}/${id}`,
+      url: withToken(`${LIST_URL}/${id}`),
       method: "PUT",
       headers,
       body: patch,
@@ -149,7 +149,7 @@ export async function deleteUserApi(id: string): Promise<void> {
       current.filter((u) => u.id !== id),
     );
     await enqueue({
-      url: `${LIST_URL}/${id}`,
+      url: withToken(`${LIST_URL}/${id}`),
       method: "DELETE",
       headers,
       body: null,
