@@ -1,4 +1,5 @@
 import type { AuthLoginRequest, AuthLoginResponse, AuthMeResponse, User } from "@shared/api";
+import { apiUrl } from "@/lib/api";
 
 const AUTH_KEY = "auth_token";
 
