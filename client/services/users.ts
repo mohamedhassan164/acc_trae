@@ -49,7 +49,6 @@ export async function listUsers(): Promise<User[]> {
 export async function createUser(input: UserCreateRequest): Promise<User> {
   const headers = {
     "Content-Type": "application/json",
-    ...authHeaders(),
   } as Record<string, string>;
   const key = cacheKeyFor(LIST_URL);
 
