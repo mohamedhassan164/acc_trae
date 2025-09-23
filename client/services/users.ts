@@ -157,7 +157,7 @@ export async function deleteUserApi(id: string): Promise<void> {
     return;
   }
 
-  const res = await fetch(apiUrl(`${LIST_URL}/${id}`), {
+  const res = await fetch(apiUrl(withToken(`${LIST_URL}/${id}`)), {
     method: "DELETE",
     headers,
   });
