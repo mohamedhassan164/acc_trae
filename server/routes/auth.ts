@@ -17,13 +17,13 @@ export const loginHandler: RequestHandler = (req, res) => {
 };
 
 export const meHandler: RequestHandler = (req, res) => {
-  const token = getTokenFromHeader(req.headers.authorization);
+  const token = extractToken(req.headers.authorization, (req.query.token as string) || undefined);
   const user = getUserByToken(token);
   res.json({ user } as AuthMeResponse);
 };
 
 export const logoutHandler: RequestHandler = (req, res) => {
-  const token = getTokenFromHeader(req.headers.authorization);
+  const token = extractToken(req.headers.authorization, (req.query.token as string) || undefined);
   if (token) invalidateToken(token);
   res.status(204).end();
 };
@@ -35,6 +35,7 @@ function getTokenFromHeader(auth?: string) {
   return token ?? null;
 }
 
-export function extractToken(auth?: string) {
+export function extractToken(auth?: string, queryToken?: string) {
+  if (queryToken) return queryToken;
   return getTokenFromHeader(auth);
 }
