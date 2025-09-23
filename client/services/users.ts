@@ -8,14 +8,14 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const LIST_URL = "/api/admin/users";
+const LIST_URL = "/api/admin/users"; // logical path
 
 export async function listUsers(): Promise<User[]> {
   const key = cacheKeyFor(LIST_URL);
   // If online, fetch fresh and update cache; on failure or offline, fallback to cache
   if (isOnline()) {
     try {
-      const res = await fetch(LIST_URL, { headers: { ...authHeaders() } });
+      const res = await fetch(apiUrl(LIST_URL), { headers: { ...authHeaders() } });
       if (res.ok) {
         const data = (await res.json()) as UsersListResponse;
         await setCached(key, data.users);
@@ -51,7 +51,7 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
     return temp;
   }
 
-  const res = await fetch(LIST_URL, { method: "POST", headers, body: JSON.stringify(input) });
+  const res = await fetch(apiUrl(LIST_URL), { method: "POST", headers, body: JSON.stringify(input) });
   if (!res.ok) throw new Error(((await res.json()) as any).error || "Failed to create user");
   const created = (await res.json()) as User;
   // Update cache
@@ -76,7 +76,7 @@ export async function updateUser(id: string, patch: UserUpdateRequest): Promise<
     return { id, username: "", name: patch.name || "", email: patch.email || "", role: (patch as any).role, active: (patch as any).active } as User;
   }
 
-  const res = await fetch(`${LIST_URL}/${id}`, { method: "PUT", headers, body: JSON.stringify(patch) });
+  const res = await fetch(apiUrl(`${LIST_URL}/${id}`), { method: "PUT", headers, body: JSON.stringify(patch) });
   if (!res.ok) throw new Error(((await res.json()) as any).error || "Failed to update user");
   const updated = (await res.json()) as User;
   const current = (await getCached<User[]>(key)) ?? [];
@@ -95,7 +95,7 @@ export async function deleteUserApi(id: string): Promise<void> {
     return;
   }
 
-  const res = await fetch(`${LIST_URL}/${id}`, { method: "DELETE", headers });
+  const res = await fetch(apiUrl(`${LIST_URL}/${id}`), { method: "DELETE", headers });
   if (!res.ok) throw new Error(((await res.json()) as any).error || "Failed to delete user");
   const current = (await getCached<User[]>(key)) ?? [];
   await setCached<User[]>(key, current.filter((u) => u.id !== id));
