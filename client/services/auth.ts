@@ -5,7 +5,45 @@ import type {
   User,
 } from "@shared/api";
 import { apiUrl } from "@/lib/api";
+//edit
+import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // ⚠️ only safe on server
+);
+
+export async function login(username: string, password: string) {
+  // authenticate with email = username
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: username,
+    password,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const user = data.user;
+
+  // fetch or create profile
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    // create profile if missing
+    const { data: newProfile } = await supabase
+      .from("profiles")
+      .insert({ id: user.id })
+      .single();
+    return { user, profile: newProfile };
+  }
+
+  return { user, profile };
+}
+
+//edit
 const AUTH_KEY = "auth_token";
 
 export function getToken() {
