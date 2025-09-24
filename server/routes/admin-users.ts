@@ -24,7 +24,7 @@ export const adminListUsers: RequestHandler = async (req, res) => {
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
-  const manager = requireManager(token);
+  const manager = await requireManager(token);
   if (!manager) return res.status(403).json({ error: "Forbidden" } as ApiError);
   if (!ensureSupabase(res)) return;
 
@@ -49,7 +49,7 @@ export const adminCreateUser: RequestHandler = async (req, res) => {
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
-  const manager = requireManager(token);
+  const manager = await requireManager(token);
   if (!manager) return res.status(403).json({ error: "Forbidden" } as ApiError);
   if (!ensureSupabase(res)) return;
 
@@ -95,7 +95,7 @@ export const adminUpdateUser: RequestHandler = async (req, res) => {
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
-  const manager = requireManager(token);
+  const manager = await requireManager(token);
   if (!manager) return res.status(403).json({ error: "Forbidden" } as ApiError);
   if (!ensureSupabase(res)) return;
 
@@ -149,7 +149,7 @@ export const adminDeleteUser: RequestHandler = async (req, res) => {
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
-  const manager = requireManager(token);
+  const manager = await requireManager(token);
   if (!manager) return res.status(403).json({ error: "Forbidden" } as ApiError);
   if (!ensureSupabase(res)) return;
 
