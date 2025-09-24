@@ -5,6 +5,7 @@ import { handleDemo } from "./routes/demo";
 import { loginHandler, logoutHandler, meHandler } from "./routes/auth";
 import { createUserHandler, deleteUserHandler, listUsersHandler, updateUserHandler } from "./routes/users";
 import { adminCreateUser, adminDeleteUser, adminListUsers, adminUpdateUser } from "./routes/admin-users";
+import accountingRoutes from "./routes/accounting";
 
 export function createServer() {
   const app = express();
@@ -78,6 +79,9 @@ res.json({ user, profile });
   app.post("/api/auth/login", loginHandler);
   app.get("/api/auth/me", meHandler);
   app.post("/api/auth/logout", logoutHandler);
+
+  // Accounting routes
+  app.use("/api/accounting", accountingRoutes);
 
   // Users (legacy in-memory)
   app.get("/api/users", listUsersHandler);
