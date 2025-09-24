@@ -64,9 +64,12 @@ export async function logout() {
   } catch {}
   try {
     if (token) {
-      await fetch(apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`), {
-        method: "POST",
-      });
+      await fetch(
+        apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`),
+        {
+          method: "POST",
+        },
+      );
     }
   } catch {}
   setToken(null);

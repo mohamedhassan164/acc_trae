@@ -26,7 +26,11 @@ seed();
 export function authenticate(username: string, password: string) {
   // Legacy fallback auth (not used when Supabase is configured)
   for (const user of users.values()) {
-    if (user.username === username && user.password === password && user.active) {
+    if (
+      user.username === username &&
+      user.password === password &&
+      user.active
+    ) {
       const token = crypto.randomUUID();
       sessions.set(token, user.id);
       const { password: _pw, ...safe } = user;
@@ -36,7 +40,9 @@ export function authenticate(username: string, password: string) {
   return null;
 }
 
-export async function getUserByTokenAsync(token?: string | null): Promise<User | null> {
+export async function getUserByTokenAsync(
+  token?: string | null,
+): Promise<User | null> {
   if (!token) return null;
   if (supabaseAdmin) {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
@@ -89,7 +95,9 @@ export function invalidateToken(token: string) {
   sessions.delete(token);
 }
 
-export async function requireManager(token?: string | null): Promise<User | null> {
+export async function requireManager(
+  token?: string | null,
+): Promise<User | null> {
   const user = await getUserByTokenAsync(token ?? null);
   if (!user) return null;
   if (user.role !== "manager" || !user.active) return null;
@@ -123,7 +131,12 @@ export function createUser(input: {
   return safe;
 }
 
-export function updateUser(id: string, patch: Partial<Omit<UserWithPassword, "id" | "username">> & { password?: string }) {
+export function updateUser(
+  id: string,
+  patch: Partial<Omit<UserWithPassword, "id" | "username">> & {
+    password?: string;
+  },
+) {
   const existing = users.get(id);
   if (!existing) return null;
   const updated: UserWithPassword = {
