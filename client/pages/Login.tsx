@@ -2,7 +2,28 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/providers/AuthProvider";
+//edit
+let { data: profile } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)   // or user_id if that’s the column
+  .single();
 
+if (!profile) {
+  const { data: newProfile, error: insertError } = await supabase
+    .from("profiles")
+    .insert({ id: user.id, username: user.email }) // adjust column name
+    .single();
+
+  if (insertError) {
+    return res.status(500).json({ error: insertError.message });
+  }
+
+  profile = newProfile;
+}
+
+
+//endedit
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
