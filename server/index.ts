@@ -8,7 +8,36 @@ import { adminCreateUser, adminDeleteUser, adminListUsers, adminUpdateUser } fro
 
 export function createServer() {
   const app = express();
+//edit 
+// server/src/index.ts
 
+app.post("/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const { data: { user }, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error || !user) {
+    return res.status(401).json({ error: error?.message || "Invalid credentials" });
+  }
+
+  // Fetch profile
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return res.status(400).json({ error: "Login failed: no profile" });
+  }
+
+  res.json({ user, profile });
+});
+
+  //edit
   // Middleware
   app.use(cors());
   app.use(express.json());
