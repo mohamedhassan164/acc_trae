@@ -23,12 +23,13 @@ export const loginHandler: RequestHandler = (req, res) => {
   res.json(result as AuthLoginResponse);
 };
 
-export const meHandler: RequestHandler = (req, res) => {
+export const meHandler: RequestHandler = async (req, res) => {
   const token = extractToken(
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
-  const user = getUserByToken(token);
+  const { getUserByTokenAsync } = await import("../store/auth");
+  const user = await getUserByTokenAsync(token);
   res.json({ user } as AuthMeResponse);
 };
 
