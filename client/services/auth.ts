@@ -20,26 +20,19 @@ export function setToken(token: string | null) {
 export async function login(
   input: AuthLoginRequest,
 ): Promise<AuthLoginResponse> {
-  const res = await fetch(apiUrl("/api/auth/login"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+  const { supabase } = await import("@/lib/supabase");
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: input.username,
+    password: input.password,
   });
-  let json: any = null;
-  try {
-    const text = await res.text();
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
+  if (error || !data?.session) {
+    throw new Error(error?.message || "Login failed (401)");
   }
-  if (!res.ok) {
-    const msg = (json && json.error) ? json.error : `Login failed (${res.status})`;
-    throw new Error(msg);
-  }
-  if (!json) throw new Error("Unexpected response");
-  const data = json as AuthLoginResponse;
-  setToken(data.token);
-  return data;
+  const token = data.session.access_token;
+  setToken(token);
+  const u = await me();
+  if (!u) throw new Error("Login failed: no profile");
+  return { token, user: u } as AuthLoginResponse;
 }
 
 export async function me(): Promise<User | null> {
