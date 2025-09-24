@@ -25,9 +25,9 @@ export async function login(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const text = await res.text();
   let json: any = null;
   try {
+    const text = await res.text();
     json = text ? JSON.parse(text) : null;
   } catch {
     json = null;
@@ -36,6 +36,7 @@ export async function login(
     const msg = (json && json.error) ? json.error : `Login failed (${res.status})`;
     throw new Error(msg);
   }
+  if (!json) throw new Error("Unexpected response");
   const data = json as AuthLoginResponse;
   setToken(data.token);
   return data;
