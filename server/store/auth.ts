@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import type { Role, User, UserWithPassword } from "@shared/api";
+import { supabaseAdmin } from "../lib/supabase";
 
-// In-memory stores (non-persistent)
+// In-memory stores (non-persistent) - fallback when Supabase is not configured
 const users = new Map<string, UserWithPassword>();
 const sessions = new Map<string, string>(); // token -> userId
 
@@ -23,6 +24,7 @@ function seed() {
 seed();
 
 export function authenticate(username: string, password: string) {
+  // Legacy fallback auth (not used when Supabase is configured)
   for (const user of users.values()) {
     if (user.username === username && user.password === password && user.active) {
       const token = crypto.randomUUID();
@@ -34,7 +36,41 @@ export function authenticate(username: string, password: string) {
   return null;
 }
 
+export async function getUserByTokenAsync(token?: string | null): Promise<User | null> {
+  if (!token) return null;
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) return null;
+    const authUser = data.user;
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("user_id,name,email,role,active")
+      .eq("user_id", authUser.id)
+      .single();
+    if (!profile) return null;
+    const user: User = {
+      id: profile.user_id,
+      username: profile.name,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role as Role,
+      active: Boolean(profile.active),
+    };
+    return user;
+  }
+  // Fallback to in-memory sessions
+  const userId = sessions.get(token);
+  if (!userId) return null;
+  const u = users.get(userId);
+  if (!u) return null;
+  const { password: _pw, ...safe } = u;
+  return safe;
+}
+
 export function getUserByToken(token?: string | null): User | null {
+  // Synchronous wrapper for legacy callers; returns null if Supabase is used (call async instead)
+  // Kept for backward compatibility in places not yet migrated
+  if (supabaseAdmin) return null;
   if (!token) return null;
   const userId = sessions.get(token);
   if (!userId) return null;
@@ -44,14 +80,19 @@ export function getUserByToken(token?: string | null): User | null {
   return safe;
 }
 
+export async function invalidateTokenAsync(_token: string) {
+  // No server-side invalidation for Supabase JWTs; client signs out.
+  return;
+}
+
 export function invalidateToken(token: string) {
   sessions.delete(token);
 }
 
-export function requireManager(token?: string | null): User | null {
-  const user = getUserByToken(token ?? null);
+export async function requireManager(token?: string | null): Promise<User | null> {
+  const user = await getUserByTokenAsync(token ?? null);
   if (!user) return null;
-  if (user.role !== "manager") return null;
+  if (user.role !== "manager" || !user.active) return null;
   return user;
 }
 
