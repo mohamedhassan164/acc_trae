@@ -10,9 +10,12 @@ interface AuthContextType {
 }
 //edit
 login: async (username, password) => {
-  const res = await authApi.login(username, password);
-  setUser(res.user); // you could also store profile if needed
-}
+  const res = await authApi.login({ username, password });
+  setUser(res.user); // user from Supabase
+  // if you want profile as well:
+  console.log("Profile:", res.profile);
+},
+
 
 //edit
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
