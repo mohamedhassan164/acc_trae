@@ -37,7 +37,30 @@ app.post("/auth/login", async (req, res) => {
   res.json({ user, profile });
 });
 
-  //edit
+  //end edit
+  //edit2
+  let { data: profile } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .single();
+
+if (!profile) {
+  const { data: newProfile, error: insertError } = await supabase
+    .from("profiles")
+    .insert({ id: user.id, username: user.email })
+    .single();
+
+  if (insertError) {
+    return res.status(500).json({ error: insertError.message });
+  }
+
+  profile = newProfile;
+}
+
+res.json({ user, profile });
+
+  //end edit2
   // Middleware
   app.use(cors());
   app.use(express.json());
