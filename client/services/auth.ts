@@ -43,8 +43,14 @@ export async function me(): Promise<User | null> {
       apiUrl(`/api/auth/me?token=${encodeURIComponent(token)}`),
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as AuthMeResponse;
-    return data.user;
+    let json: any = null;
+    try {
+      const text = await res.text();
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+    return (json as AuthMeResponse | null)?.user ?? null;
   } catch {
     return null;
   }
