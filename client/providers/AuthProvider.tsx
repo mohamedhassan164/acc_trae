@@ -8,7 +8,13 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
+//edit
+login: async (username, password) => {
+  const res = await authApi.login(username, password);
+  setUser(res.user); // you could also store profile if needed
+}
 
+//edit
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
