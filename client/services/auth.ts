@@ -25,8 +25,18 @@ export async function login(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error((await res.json()).error || "Login failed");
-  const data = (await res.json()) as AuthLoginResponse;
+  const text = await res.text();
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (!res.ok) {
+    const msg = (json && json.error) ? json.error : `Login failed (${res.status})`;
+    throw new Error(msg);
+  }
+  const data = json as AuthLoginResponse;
   setToken(data.token);
   return data;
 }
