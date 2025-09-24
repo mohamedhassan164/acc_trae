@@ -75,19 +75,67 @@ export function setToken(token: string | null) {
 export async function login(
   input: AuthLoginRequest,
 ): Promise<AuthLoginResponse> {
-  const { supabase } = await import("@/lib/supabase");
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: input.username,
-    password: input.password,
-  });
-  if (error || !data?.session) {
-    throw new Error(error?.message || "Login failed (401)");
+  try {
+    const { supabase } = await import("@/lib/supabase");
+    
+    // Authenticate user
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: input.username,
+      password: input.password,
+    });
+    
+    // Handle authentication errors with specific messages
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        throw new Error("Invalid username or password. Please try again.");
+      } else if (error.message.includes("Email not confirmed")) {
+        throw new Error("Please verify your email address before logging in.");
+      } else {
+        throw new Error(error.message || "Login failed. Please try again.");
+      }
+    }
+    
+    if (!data?.session) {
+      throw new Error("Authentication failed. Please try again later.");
+    }
+    
+    // Store authentication token
+    const token = data.session.access_token;
+    setToken(token);
+    
+    // Check if user profile exists, if not create it
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', data.user.id)
+      .single();
+      
+    if (profileError) {
+      // Create a basic profile if it doesn't exist
+      const { error: insertError } = await supabase.from('user_profiles').insert({
+        user_id: data.user.id,
+        email: data.user.email || '',
+        name: data.user.email?.split('@')[0] || 'User'
+      });
+      
+      if (insertError) {
+        console.error("Profile creation error:", insertError);
+        throw new Error("Could not create user profile. Please contact support.");
+      }
+    }
+    
+    // Retrieve user data
+    const u = await me();
+    if (!u) {
+      throw new Error("Could not retrieve user profile. Please try logging in again.");
+    }
+    
+    return { token, user: u } as AuthLoginResponse;
+  } catch (error: any) {
+    // Clean up on error
+    setToken(null);
+    throw error;
   }
-  const token = data.session.access_token;
-  setToken(token);
-  const u = await me();
-  if (!u) throw new Error("Login failed: no profile");
-  return { token, user: u } as AuthLoginResponse;
 }
 
 export async function me(): Promise<User | null> {
