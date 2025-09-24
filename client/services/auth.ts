@@ -53,11 +53,15 @@ export async function me(): Promise<User | null> {
 export async function logout() {
   const token = getToken();
   try {
-    await fetch(apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`), {
-      method: "POST",
-    });
-  } catch {
-    // ignore network errors on logout
-  }
+    const { supabase } = await import("@/lib/supabase");
+    await supabase.auth.signOut();
+  } catch {}
+  try {
+    if (token) {
+      await fetch(apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`), {
+        method: "POST",
+      });
+    }
+  } catch {}
   setToken(null);
 }
