@@ -76,11 +76,17 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
     headers,
     body: JSON.stringify(input),
   });
-  if (!res.ok)
-    throw new Error(
-      ((await res.json()) as any).error || "Failed to create user",
-    );
-  const created = (await res.json()) as User;
+  const text = await res.text();
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (!res.ok) {
+    throw new Error((json && json.error) || "Failed to create user");
+  }
+  const created = json as User;
   // Update cache
   const current = (await getCached<User[]>(key)) ?? [];
   await setCached(key, [
@@ -130,11 +136,17 @@ export async function updateUser(
     headers,
     body: JSON.stringify(patch),
   });
-  if (!res.ok)
-    throw new Error(
-      ((await res.json()) as any).error || "Failed to update user",
-    );
-  const updated = (await res.json()) as User;
+  const text = await res.text();
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (!res.ok) {
+    throw new Error((json && json.error) || "Failed to update user");
+  }
+  const updated = json as User;
   const current = (await getCached<User[]>(key)) ?? [];
   await setCached<User[]>(
     key,
@@ -166,10 +178,16 @@ export async function deleteUserApi(id: string): Promise<void> {
     method: "DELETE",
     headers,
   });
-  if (!res.ok)
-    throw new Error(
-      ((await res.json()) as any).error || "Failed to delete user",
-    );
+  const text = await res.text();
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (!res.ok) {
+    throw new Error((json && json.error) || "Failed to delete user");
+  }
   const current = (await getCached<User[]>(key)) ?? [];
   await setCached<User[]>(
     key,
