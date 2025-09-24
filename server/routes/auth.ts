@@ -28,8 +28,21 @@ export const meHandler: RequestHandler = async (req, res) => {
     req.headers.authorization,
     (req.query.token as string) || undefined,
   );
+  
+  if (!token) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  
   const { getUserByTokenAsync } = await import("../store/auth");
   const user = await getUserByTokenAsync(token);
+  
+  if (!user) {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+  
+  res.setHeader('Content-Type', 'application/json');
   res.json({ user } as AuthMeResponse);
 };
 

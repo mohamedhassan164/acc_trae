@@ -78,7 +78,7 @@ export async function login(
   try {
     const { supabase } = await import("@/lib/supabase");
     
-    // Authenticate user
+    // Authenticate user with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: input.username,
       password: input.password,
@@ -109,20 +109,35 @@ export async function login(
       .select('*')
       .eq('user_id', data.user.id)
       .single();
+    
+    let profile = profileData;
       
-    if (profileError) {
-      // Create a basic profile if it doesn't exist
-      const { error: insertError } = await supabase.from('user_profiles').insert({
-        user_id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.email?.split('@')[0] || 'User'
-      });
+    if (profileError && profileError.code === 'PGRST116') {
+      // Create a basic profile if it doesn't exist (PGRST116 = not found)
+      const { data: newProfile, error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.email?.split('@')[0] || 'User'
+        })
+        .select()
+        .single();
       
       if (insertError) {
         console.error("Profile creation error:", insertError);
         throw new Error("Could not create user profile. Please contact support.");
+      } else {
+        profile = newProfile;
       }
     }
+    
+    // Store user session in localStorage for persistence
+    localStorage.setItem('supabase_user', JSON.stringify({
+      id: data.user.id,
+      email: data.user.email,
+      name: profile?.name || data.user.email?.split('@')[0] || 'User'
+    }));
     
     // Retrieve user data
     const u = await me();
@@ -141,39 +156,51 @@ export async function login(
 export async function me(): Promise<User | null> {
   const token = getToken();
   if (!token) return null;
+  
   try {
-    const res = await fetch(
-      apiUrl(`/api/auth/me?token=${encodeURIComponent(token)}`),
-    );
-    if (!res.ok) return null;
-    let json: any = null;
-    try {
-      const text = await res.text();
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      json = null;
+    const { supabase } = await import("@/lib/supabase");
+    
+    // Get current session from Supabase
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      // Session expired or invalid, clear token
+      setToken(null);
+      return null;
     }
-    return (json as AuthMeResponse | null)?.user ?? null;
-  } catch {
+    
+    // Get user data from Supabase
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return null;
+    
+    // Get user profile from database
+    const { data: profileData } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .single();
+    
+    // Return user data
+    return {
+      id: userData.user.id,
+      username: userData.user.email || '',
+      name: profileData?.name || userData.user.email?.split('@')[0] || 'User',
+      email: userData.user.email || '',
+      role: 'user',
+    };
+  } catch (error) {
+    console.error('Error in me() function:', error);
     return null;
   }
 }
 
 export async function logout() {
-  const token = getToken();
   try {
     const { supabase } = await import("@/lib/supabase");
     await supabase.auth.signOut();
-  } catch {}
-  try {
-    if (token) {
-      await fetch(
-        apiUrl(`/api/auth/logout?token=${encodeURIComponent(token)}`),
-        {
-          method: "POST",
-        },
-      );
-    }
-  } catch {}
-  setToken(null);
+    localStorage.removeItem('supabase_user');
+    setToken(null);
+    console.log('Successfully logged out');
+  } catch (error) {
+    console.error('Error during logout:', error);
+  }
 }
