@@ -12,7 +12,24 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // ⚠️ only safe on server
 );
+//edit
+// client/src/services/auth.ts
+export async function login({ username, password }: { username: string; password: string }) {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email: username, password }),
+  });
 
+  if (!res.ok) {
+    throw new Error((await res.json()).error || "Login failed");
+  }
+
+  return res.json(); // { user, profile }
+}
+
+//edit
 export async function login(username: string, password: string) {
   // authenticate with email = username
   const { data, error } = await supabase.auth.signInWithPassword({
